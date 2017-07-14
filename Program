@@ -1,0 +1,115 @@
+import telebot
+import time
+import vk
+import threading
+
+session = vk.AuthSession(app_id='АЙДИ ПРИЛОЖЕНИЯ В ВК', user_login='ВАШ ЛОГИН', user_password='ВАШ ПАРОЛЬ', scope='wall, messages')
+api = vk.API(session, lang='ru', timeout=10)
+
+t = [] #Пары айдивк/имя, которое будет отображаться
+n=11
+
+token = 'ТУТ ТОКЕН БОТА, КОТОРЫЙ ПОСЫЛАЕТ ВСЕ СООБЩЕНИЯ'
+bot = telebot.TeleBot(token)
+
+token1 = 'ТУТ ТОКЕН ТОЛЬКО ДЛЯ КОНКРЕТНОЙ БЕСЕДЫ'
+bot1 = telebot.TeleBot(token1)
+
+def poll():
+    bot.polling(none_stop=True)
+
+global target
+target = 'ЦЕЛЬ ДЛЯ КОНКРЕТНЫХ СООБЩЕНИЙ'
+
+def poll1():
+    bot1.polling(none_stop=True)
+
+@bot1.message_handler(content_types=["text"])
+def all_messages1(message):
+    api.messages.send(chat_id = 73, message =  message.text)
+
+@bot.message_handler(content_types=["text"])
+def all_messages(message):
+    s = message.text
+    global target
+    if '/target' in message.text:
+        s = s.replace('/target ', '')
+        target = s
+        print(target)
+    i = 0
+    j = 0
+    while i < n:
+        if str(t[1][i]) == target:
+            j = t[0][i]
+        i = i + 1
+
+    api.messages.send(user_id = j, message =  message.text)
+
+
+
+if __name__ == '__main__':
+
+    t1 = threading.Thread(target=poll)
+    t1.start()
+
+    t2 = threading.Thread(target=poll1)
+    t2.start()
+
+    #Авторизация для второй сессии. Да, можно было сделать всё сразу и кароче, но вот так
+    session = vk.AuthSession(app_id='', user_login='', user_password='', scope='wall, messages')
+    api = vk.API(session, lang='ru', timeout=10)
+
+
+    while 1==1:
+        try:
+            a = api.messages.get(count=1)
+            time.sleep(1)
+            try:
+                if a[1]['chat_id'] == 73:
+                    #Этот код повторяется, так что прости, ГОСПОДЬ
+                    if a[1]['read_state'] == 0:
+                        api.messages.markAsRead(message_ids=a[1]['mid'])
+                        if a[1]['body'] == '':
+                            bot1.send_message(67631538, 'Там что-то было, но не сообщение')
+                        else:
+                            i = 0
+                            while i < n:
+                                if str(t[0][i]) == str(a[1]['uid']):
+                                    a[1]['uid'] = t[1][i]
+                                i = i + 1
+                            print(a)
+                            s = str(a[1]['uid']) + ': ' + str(a[1]['body'])
+                            bot1.send_message(67631538, s)
+                    continue
+
+
+
+                elif a[1]['chat_id'] != 97:
+                    api.messages.markAsRead(message_ids=a[1]['mid'])
+                    continue
+            except:
+                1==1
+
+            if a[1]['read_state'] == 0:
+                api.messages.markAsRead(message_ids=a[1]['mid'])
+                if a[1]['body'] == '':
+                    bot.send_message(67631538, 'Там что-то было, но не сообщение')
+                else:
+                    i=0
+                    while i<n:
+                        if str(t[0][i]) == str(a[1]['uid']):
+                            a[1]['uid'] = t[1][i]
+                        i = i+1
+                    print(a)
+                    flag = False
+                    try:
+                        print(a[1]['chat_id'])
+                    except:
+                        flag = True
+                    if flag == False:
+                        s = str(a[1]['title']) + '/' + str(a[1]['uid']) + ': ' + str(a[1]['body'])
+                        bot.send_message(67631538, s)
+                    else:
+                        s = str(a[1]['uid']) + ': ' + str(a[1]['body'])
+                        bot.send_message(67631538, s)
+        except: continue
